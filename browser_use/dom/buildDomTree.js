@@ -6,6 +6,8 @@
     debugMode: false,
   }
 ) => {
+  Node_ELEMENT_NODE = 1;
+  Node_TEXT_NODE = 3;
   const { doHighlightElements, focusHighlightIndex, viewportExpansion, debugMode } = args;
   let highlightIndex = 0; // Reset highlight index
 
@@ -495,7 +497,7 @@
     const segments = [];
     let currentElement = element;
 
-    while (currentElement && currentElement.nodeType === Node.ELEMENT_NODE) {
+    while (currentElement && currentElement.nodeType === Node_ELEMENT_NODE) {
       // Stop if we hit a shadow root or iframe
       if (
         stopAtBoundary &&
@@ -644,7 +646,7 @@
    * One of the things we tried at the beginning was also to use event listeners, and other fancy class, style stuff -> what actually worked best was just combining most things with computed cursor style :)
    */
   function isInteractiveElement(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+    if (!element || element.nodeType !== Node_ELEMENT_NODE) {
       return false;
     }
 
@@ -1001,7 +1003,7 @@
 
   // Add these helper functions at the top level
   function isInteractiveCandidate(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+    if (!element || element.nodeType !== Node_ELEMENT_NODE) return false;
 
     const tagName = element.tagName.toLowerCase();
 
@@ -1038,7 +1040,7 @@
    * separate from its parent (if the parent is also interactive).
    */
   function isElementDistinctInteraction(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+    if (!element || element.nodeType !== Node_ELEMENT_NODE) {
       return false;
     }
 
@@ -1153,7 +1155,7 @@
   function buildDomTree(node, parentIframe = null, isParentHighlighted = false) {
     // Fast rejection checks first
     if (!node || node.id === HIGHLIGHT_CONTAINER_ID || 
-        (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.TEXT_NODE)) {
+        (node.nodeType !== Node_ELEMENT_NODE && node.nodeType !== Node_TEXT_NODE)) {
       if (debugMode) PERF_METRICS.nodeMetrics.skippedNodes++;
       return null;
     }
@@ -1187,13 +1189,13 @@
     }
 
     // Early bailout for non-element nodes except text
-    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.TEXT_NODE) {
+    if (node.nodeType !== Node_ELEMENT_NODE && node.nodeType !== Node_TEXT_NODE) {
       if (debugMode) PERF_METRICS.nodeMetrics.skippedNodes++;
       return null;
     }
 
     // Process text nodes
-    if (node.nodeType === Node.TEXT_NODE) {
+    if (node.nodeType === Node_TEXT_NODE) {
       const textContent = node.textContent.trim();
       if (!textContent) {
         if (debugMode) PERF_METRICS.nodeMetrics.skippedNodes++;
@@ -1218,7 +1220,7 @@
     }
 
     // Quick checks for element nodes
-    if (node.nodeType === Node.ELEMENT_NODE && !isElementAccepted(node)) {
+    if (node.nodeType === Node_ELEMENT_NODE && !isElementAccepted(node)) {
       if (debugMode) PERF_METRICS.nodeMetrics.skippedNodes++;
       return null;
     }
@@ -1266,7 +1268,7 @@
 
     let nodeWasHighlighted = false;
     // Perform visibility, interactivity, and highlighting checks
-    if (node.nodeType === Node.ELEMENT_NODE) {
+    if (node.nodeType === Node_ELEMENT_NODE) {
       nodeData.isVisible = isElementVisible(node); // isElementVisible uses offsetWidth/Height, which is fine
       if (nodeData.isVisible) {
         nodeData.isTopElement = isTopElement(node);

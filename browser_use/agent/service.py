@@ -502,6 +502,16 @@ class Agent(Generic[Context]):
 
 			try:
 				model_output = await self.get_next_action(input_messages)
+
+				input_messages_str = f'{input_messages}'
+                # 替换长base64图片数据为简化的占位符
+				input_messages_str = re.sub(  
+                    r"'image_url': \{'url': 'data:image/png;base64,[^']*'",
+                    "'image_url': {'url': 'data:image/png;base64,a.png'",
+                    input_messages_str
+                )
+				logger.info(f'############################### input_messages:{input_messages_str}\nmodel_output: {model_output}')
+				
 				if (
 					not model_output.action
 					or not isinstance(model_output.action, list)
@@ -560,6 +570,9 @@ class Agent(Generic[Context]):
 				raise e
 
 			result: list[ActionResult] = await self.multi_act(model_output.action)
+
+			logger.info(f'############################### multi_act model_output.action:{model_output.action}\nresult: {result}')
+                			
 
 			self.state.last_result = result
 
@@ -692,7 +705,7 @@ class Agent(Generic[Context]):
 	async def get_next_action(self, input_messages: list[BaseMessage]) -> AgentOutput:
 		"""Get next action from LLM based on current state"""
 		input_messages = self._convert_input_messages(input_messages)
-
+		structured_llm = None
 		if self.tool_calling_method == 'raw':
 			logger.debug(f'Using {self.tool_calling_method} for {self.chat_model_library}')
 			try:
@@ -726,6 +739,16 @@ class Agent(Generic[Context]):
 			structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True, method=self.tool_calling_method)
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 
+		
+		structured_llm_str = f'{structured_llm}'
+		structured_llm_str = re.sub(  
+            r"'image_url': \{'url': 'data:image/png;base64,[^']*'",
+            "'image_url': {'url': 'data:image/png;base64,a.png'",
+            structured_llm_str
+        )
+		logger.info(f'############################### action raw structured_llm:{structured_llm_str}\nresponse: {response}')
+
+       
 		# Handle tool call responses
 		if response.get('parsing_error') and 'raw' in response:
 			raw_msg = response['raw']
@@ -1406,6 +1429,14 @@ class Agent(Generic[Context]):
 		# Get planner output
 		try:
 			response = await self.settings.planner_llm.ainvoke(planner_messages)
+			planner_messages_str = f'{planner_messages}'
+				# 替换长base64图片数据为简化的占位符
+			planner_messages_str = re.sub(	
+				r"'image_url': \{'url': 'data:image/png;base64,[^']*'",
+				"'image_url': {'url': 'data:image/png;base64,a.png'",
+				planner_messages_str
+			)
+			logger.info(f'############################### planner_llm.ainvoke planner_messages:{planner_messages_str}\nPlanner response: {response}')
 		except Exception as e:
 			logger.error(f'Failed to invoke planner: {str(e)}')
 			raise LLMException(401, 'LLM API call failed') from e

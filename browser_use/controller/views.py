@@ -89,3 +89,10 @@ class DragDropAction(BaseModel):
 	# Common options
 	steps: int | None = Field(10, description='Number of intermediate points for smoother movement (5-20 recommended)')
 	delay_ms: int | None = Field(5, description='Delay in milliseconds between steps (0 for fastest, 10-20 for more natural)')
+
+
+class InputTimeAction(BaseModel):
+	index: int
+	time_value: str = Field(..., description='时间值，格式可以是: "HH:MM", "HH:MM:SS", "YYYY-MM-DD HH:MM", "YYYY-MM-DD HH:MM:SS" 等')
+	time_format: str | None = Field(None, description='可选的时间格式，如果不提供则自动检测')
+	xpath: str | None = None

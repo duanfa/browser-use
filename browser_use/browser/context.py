@@ -1698,6 +1698,97 @@ class BrowserContext:
 			logger.debug(f'❌  Failed to input text into element: {repr(element_node)}. Error: {str(e)}')
 			raise BrowserError(f'Failed to input text into index {element_node.highlight_index}')
 
+	@time_execution_async('--input_time_element_node')
+	async def _input_time_element_node(self, element_node: DOMElementNode, time_value: str, time_format: str | None = None):
+		"""
+		Input time value into a time input element with proper error handling and state management.
+		Handles different types of time input fields (datetime-local, time, date) and ensures proper element state before input.
+		"""
+		try:
+			element_handle = await self.get_locate_element(element_node)
+
+			if element_handle is None:
+				raise BrowserError(f'Element: {repr(element_node)} not found')
+
+			# Ensure element is ready for input
+			try:
+				await element_handle.wait_for_element_state('stable', timeout=1000)
+				is_visible = await self._is_visible(element_handle)
+				if is_visible:
+					await element_handle.scroll_into_view_if_needed(timeout=1000)
+			except Exception:
+				pass
+
+			# Get element properties to determine input method
+			tag_handle = await element_handle.get_property('tagName')
+			tag_name = (await tag_handle.json_value()).lower()
+			type_handle = await element_handle.get_property('type')
+			input_type = (await type_handle.json_value()).lower() if type_handle else 'text'
+			readonly_handle = await element_handle.get_property('readOnly')
+			disabled_handle = await element_handle.get_property('disabled')
+
+			readonly = await readonly_handle.json_value() if readonly_handle else False
+			disabled = await disabled_handle.json_value() if disabled_handle else False
+
+			# if readonly or disabled:
+			# 	raise BrowserError(f'Element is readonly or disabled: {repr(element_node)}')
+
+			# Click the element first to ensure focus
+			if not (readonly or disabled):
+				await element_handle.click()
+				await asyncio.sleep(0.1)
+
+			# Handle different time input types
+			if tag_name == 'input' and input_type in ['datetime-local', 'time', 'date', 'datetime']:
+				# For HTML5 time inputs, use the value property
+				try:
+					# Clear existing value first
+					await element_handle.evaluate('el => {el.value = "";}')
+					
+					# Set the time value directly
+					await element_handle.evaluate(f'el => {{el.value = "{time_value}";}}')
+					
+					# Trigger change event to ensure the input is properly processed
+					await element_handle.evaluate('el => {el.dispatchEvent(new Event("change", { bubbles: true }));}')
+					
+					logger.debug(f'✅ Successfully set time value "{time_value}" for {input_type} input')
+					
+				except Exception as e:
+					logger.debug(f'Failed to set value directly, trying type method: {str(e)}')
+					# Fallback to typing method
+					await element_handle.type(time_value, delay=5)
+					
+			elif tag_name == 'input' and input_type == 'text':
+				
+				# Regular text input handling
+				await element_handle.evaluate('el => {el.textContent = ""; el.value = "";}')
+				type_result = await element_handle.type(time_value, delay=5)
+				inputValue = await element_handle.evaluate("(el) => el.value", element_handle)
+				if inputValue != time_value:
+					await element_handle.evaluate("(el, value) => { el.value = value; }", time_value)
+					
+			else:
+				# For other elements, use general text input method
+				try:
+					if await element_handle.get_property('isContentEditable'):
+						await element_handle.evaluate('el => {el.textContent = "";}')
+						await element_handle.type(time_value, delay=5)
+						inputValue = await element_handle.evaluate("(el) => el.textContent", element_handle)
+						if inputValue != time_value:
+							await element_handle.evaluate("(el, value) => { el.textContent = value; }", time_value)
+					else:
+						await element_handle.fill(time_value)
+				except Exception:
+					# Last resort fallback
+					await self.get_agent_current_page().keyboard.type(time_value)
+
+			# Wait a bit for the input to be processed
+			await asyncio.sleep(0.2)
+
+		except Exception as e:
+			logger.debug(f'❌  Failed to input time value into element: {repr(element_node)}. Error: {str(e)}')
+			raise BrowserError(f'Failed to input time value "{time_value}" into index {element_node.highlight_index}')
+
 	@time_execution_async('--click_element_node')
 	async def _click_element_node(self, element_node: DOMElementNode) -> str | None:
 		"""

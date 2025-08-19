@@ -204,12 +204,13 @@ class Browser:
 					f'http://localhost:{self.config.chrome_remote_debugging_port}/json/version', timeout=2
 				)
 				if response.status_code == 200:
+					endpoint_url = response.json()['webSocketDebuggerUrl']
 					logger.info(
 						f'🔌  Reusing existing browser found running on http://localhost:{self.config.chrome_remote_debugging_port}'
 					)
 					browser_class = getattr(playwright, self.config.browser_class)
 					browser = await browser_class.connect_over_cdp(
-						endpoint_url=f'http://localhost:{self.config.chrome_remote_debugging_port}',
+						endpoint_url=endpoint_url,
 						timeout=20000,  # 20 second timeout for connection
 					)
 					return browser

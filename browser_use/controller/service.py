@@ -22,6 +22,7 @@ from browser_use.controller.views import (
 	DragDropAction,
 	GoToUrlAction,
 	InputTextAction,
+	InputTimeAction,
 	NoParamsAction,
 	OpenTabAction,
 	Position,
@@ -166,6 +167,21 @@ class Controller(Generic[Context]):
 				msg = f'⌨️  Input {params.text} into index {params.index}'
 			else:
 				msg = f'⌨️  Input sensitive data into index {params.index}'
+			logger.info(msg)
+			logger.debug(f'Element xpath: {element_node.xpath}')
+			return ActionResult(extracted_content=msg, include_in_memory=True)
+
+		@self.registry.action(
+			'Input time value into a time input element (datetime-local, time, date input types), before input the time value, do not click the element, or cause the page element to be focused,change the page elements',
+			param_model=InputTimeAction,
+		)
+		async def input_time(params: InputTimeAction, browser: BrowserContext):
+			if params.index not in await browser.get_selector_map():
+				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
+
+			element_node = await browser.get_dom_element_by_index(params.index)
+			await browser._input_time_element_node(element_node, params.time_value, params.time_format)
+			msg = f'⏰  Input time value {params.time_value} into index {params.index}'
 			logger.info(msg)
 			logger.debug(f'Element xpath: {element_node.xpath}')
 			return ActionResult(extracted_content=msg, include_in_memory=True)
