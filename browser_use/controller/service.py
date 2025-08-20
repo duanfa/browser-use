@@ -27,6 +27,7 @@ from browser_use.controller.views import (
 	OpenTabAction,
 	Position,
 	ScrollAction,
+	SearchContactAction,
 	SearchGoogleAction,
 	SendKeysAction,
 	SwitchTabAction,
@@ -116,7 +117,7 @@ class Controller(Generic[Context]):
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
 		# Element Interaction Actions
-		@self.registry.action('Click element by index', param_model=ClickElementAction)
+		@self.registry.action('Click element by index,if the element is data time input text field, need use input_time action instead', param_model=ClickElementAction)
 		async def click_element_by_index(params: ClickElementAction, browser: BrowserContext):
 			session = await browser.get_session()
 
@@ -154,7 +155,7 @@ class Controller(Generic[Context]):
 				return ActionResult(error=str(e))
 
 		@self.registry.action(
-			'Input text into a input interactive element',
+			'Input text into a input interactive element, if the value is data time value, need use input_time action instead',
 			param_model=InputTextAction,
 		)
 		async def input_text(params: InputTextAction, browser: BrowserContext, has_sensitive_data: bool = False):
@@ -172,7 +173,7 @@ class Controller(Generic[Context]):
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
 		@self.registry.action(
-			'Input time value into a time input element (datetime-local, time, date input types), before input the time value, do not click the element, or cause the page element to be focused,change the page elements',
+			'Input time value into a time input element (datetime-local, time, date input types), before input the time value, must do not click the time input element,  avoid the javascript  plug-in window pops up  and change the page elements',
 			param_model=InputTimeAction,
 		)
 		async def input_time(params: InputTimeAction, browser: BrowserContext):
@@ -182,6 +183,28 @@ class Controller(Generic[Context]):
 			element_node = await browser.get_dom_element_by_index(params.index)
 			await browser._input_time_element_node(element_node, params.time_value, params.time_format)
 			msg = f'⏰  Input time value {params.time_value} into index {params.index}'
+			logger.info(msg)
+			logger.debug(f'Element xpath: {element_node.xpath}')
+			return ActionResult(extracted_content=msg, include_in_memory=True)
+
+		@self.registry.action(
+			' when encounter “Search Users” plug-in window pops up,  the text input field with the placeholder like: “Enter a person’s name or department”. need input the search keywords into the text input field,if has search button, then click the search button,next action is to chose the first result',
+			param_model=SearchContactAction,
+		)
+		async def search_contact(params: SearchContactAction, browser: BrowserContext):
+			if params.index not in await browser.get_selector_map():
+				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
+
+			element_node = await browser.get_dom_element_by_index(params.index)
+			search_result = await browser._search_contact_element_node(
+				element_node, 
+				params.search_query, 
+				params.search_button_id
+			)
+			
+			msg = f'🔍  Searched for contact "{params.search_query}" in index {params.index}'
+			if search_result:
+				msg += f', found: {search_result}'
 			logger.info(msg)
 			logger.debug(f'Element xpath: {element_node.xpath}')
 			return ActionResult(extracted_content=msg, include_in_memory=True)
@@ -258,6 +281,16 @@ class Controller(Generic[Context]):
 			template = PromptTemplate(input_variables=['goal', 'page'], template=prompt)
 			try:
 				output = await page_extraction_llm.ainvoke(template.format(goal=goal, page=content))
+
+				content_str = f'{template.format(goal=goal, page=content)}'
+				# 替换长base64图片数据为简化的占位符
+				content_str = re.sub(	
+					r"'image_url': \{'url': 'data:image/png;base64,[^']*'",
+					"'image_url': {'url': 'data:image/png;base64,a.png'",
+					content_str
+				)
+				logger.info(f'############################### page_extraction_llm.ainvoke content_str:{content_str}\n output: {output}')
+			
 				msg = f'📄  Extracted from page\n: {output.content}\n'
 				logger.info(msg)
 				return ActionResult(extracted_content=msg, include_in_memory=True)

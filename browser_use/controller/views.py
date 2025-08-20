@@ -96,3 +96,9 @@ class InputTimeAction(BaseModel):
 	time_value: str = Field(..., description='时间值，格式可以是: "HH:MM", "HH:MM:SS", "YYYY-MM-DD HH:MM", "YYYY-MM-DD HH:MM:SS" 等')
 	time_format: str | None = Field(None, description='可选的时间格式，如果不提供则自动检测')
 	xpath: str | None = None
+
+
+class SearchContactAction(BaseModel):
+    index: int = Field(..., description='搜索输入框的id, 例如："search-input"')
+    search_query: str = Field(..., description='搜索关键字')
+    search_button_id: int| None = Field(None, description='搜索按钮的id, 例如："search-button"')

@@ -502,16 +502,6 @@ class Agent(Generic[Context]):
 
 			try:
 				model_output = await self.get_next_action(input_messages)
-
-				input_messages_str = f'{input_messages}'
-                # 替换长base64图片数据为简化的占位符
-				input_messages_str = re.sub(  
-                    r"'image_url': \{'url': 'data:image/png;base64,[^']*'",
-                    "'image_url': {'url': 'data:image/png;base64,a.png'",
-                    input_messages_str
-                )
-				logger.info(f'############################### input_messages:{input_messages_str}\nmodel_output: {model_output}')
-				
 				if (
 					not model_output.action
 					or not isinstance(model_output.action, list)
@@ -740,13 +730,24 @@ class Agent(Generic[Context]):
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 
 		
-		structured_llm_str = f'{structured_llm}'
-		structured_llm_str = re.sub(  
+		input_messages_str = f'{input_messages}'
+		input_messages_str = re.sub(  
             r"'image_url': \{'url': 'data:image/png;base64,[^']*'",
             "'image_url': {'url': 'data:image/png;base64,a.png'",
-            structured_llm_str
+            input_messages_str
         )
-		logger.info(f'############################### action raw structured_llm:{structured_llm_str}\nresponse: {response}')
+
+		 # 尝试访问内部提示词
+		if hasattr(structured_llm, 'prompt'):
+			print(f"提示词: {structured_llm.prompt}")
+		
+		if hasattr(structured_llm, 'system_message'):
+			print(f"系统消息: {structured_llm.system_message}")
+		
+		 # 打印输出格式
+		logger.info(f"\n输出格式: {self.AgentOutput}")
+		
+		logger.info(f'############################### action raw structured_llm:{structured_llm}\ninput_messages:{input_messages_str}\nresponse: {response}')
 
        
 		# Handle tool call responses

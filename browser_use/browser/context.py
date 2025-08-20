@@ -1680,8 +1680,11 @@ class BrowserContext:
 			disabled = await disabled_handle.json_value() if disabled_handle else False
 
 			# always click the element first to make sure it's in the focus
-			await element_handle.click()
-			await asyncio.sleep(0.1)
+			try:
+				await element_handle.click(timeout=500)
+				await asyncio.sleep(0.1)
+			except Exception:
+				logger.debug(f'❌  Failed to click element: {repr(element_node)} pass')
 
 			try:
 				if (await is_contenteditable.json_value() or tag_name == 'input') and not (readonly or disabled):
@@ -1788,6 +1791,225 @@ class BrowserContext:
 		except Exception as e:
 			logger.debug(f'❌  Failed to input time value into element: {repr(element_node)}. Error: {str(e)}')
 			raise BrowserError(f'Failed to input time value "{time_value}" into index {element_node.highlight_index}')
+
+	@time_execution_async('--search_contact_element_node')
+	async def _search_contact_element_node(
+		self, 
+		element_node: DOMElementNode, 
+		search_query: str, 
+		search_button_id: int | None = None
+	) :
+		"""
+		Search for contacts in a contact search input field with intelligent handling of different search interfaces.
+		Supports various contact search patterns and can optionally select the first result.
+		"""
+		try:
+			element_handle = await self.get_locate_element(element_node)
+
+			await element_handle.click()
+			await asyncio.sleep(0.1)
+
+			if element_handle is None:
+				raise BrowserError(f'Element: {repr(element_node)} not found')
+
+			# Ensure element is ready for input
+			try:
+				await element_handle.wait_for_element_state('stable', timeout=1000)
+				is_visible = await self._is_visible(element_handle)
+				if is_visible:
+					await element_handle.scroll_into_view_if_needed(timeout=1000)
+			except Exception:
+				pass
+
+			# Get element properties
+			tag_handle = await element_handle.get_property('tagName')
+			tag_name = (await tag_handle.json_value()).lower()
+			type_handle = await element_handle.get_property('type')
+			input_type = (await type_handle.json_value()).lower() if type_handle else 'text'
+			placeholder_handle = await element_handle.get_property('placeholder')
+			placeholder_text = (await placeholder_handle.json_value()) if placeholder_handle else ''
+			
+			# Detect if this is a contact search field
+			# is_contact_search = self._is_contact_search_field(placeholder_text, search_type)
+			
+			# if not is_contact_search:
+			# 	logger.debug(f'Element does not appear to be a contact search field: {placeholder_text}')
+
+			# Clear existing content and input search query
+			if tag_name == 'input':
+				await element_handle.evaluate('el => {el.value = "";}')
+				await element_handle.type(search_query, delay=5)
+				inputValue = await element_handle.evaluate("(el) => el.value", element_handle)
+				if inputValue != search_query:
+					await element_handle.evaluate("(el, value) => { el.value = value; }", search_query)
+			elif await element_handle.get_property('isContentEditable'):
+				await element_handle.evaluate('el => {el.textContent = "";}')
+				await element_handle.type(search_query, delay=5)
+				inputValue = await element_handle.evaluate("(el) => el.textContent", element_handle)
+				if inputValue != search_query:
+					await element_handle.evaluate("(el, value) => { el.textContent = value; }", search_query)
+				
+			else:
+				await element_handle.fill(search_query)
+
+			# Trigger search (common patterns)
+			if search_button_id:
+				search_button_element = await self.get_locate_element_by_index(search_button_id)
+				await search_button_element.click()
+			else:
+				await self._trigger_contact_search(element_handle, search_query)
+			
+		except Exception as e:
+			logger.debug(f'❌  Failed to search contact in element: {repr(element_node)}. Error: {str(e)}')
+			raise BrowserError(f'Failed to search for contact "{search_query}" in index {element_node.highlight_index}')
+
+	def _is_contact_search_field(self, placeholder_text: str, search_type: str | None) -> bool:
+		"""
+		Detect if an input field is likely a contact search field based on placeholder text and search type.
+		"""
+		contact_keywords = [
+			'contact', 'person', 'name', 'email', 'phone', 'telephone', 'mobile',
+			'user', 'employee', 'staff', 'member', 'customer', 'client',
+			'search', 'find', 'lookup', 'query', 'filter',
+			'联系人', '人员', '姓名', '邮箱', '电话', '手机', '用户', '员工', '客户'
+		]
+		
+		if search_type:
+			return True  # If search type is specified, assume it's a contact search
+		
+		placeholder_lower = placeholder_text.lower()
+		return any(keyword in placeholder_lower for keyword in contact_keywords)
+
+	async def _trigger_contact_search(self, element_handle: ElementHandle, search_query: str):
+		"""
+		Trigger the contact search by common methods like pressing Enter or triggering events.
+		"""
+		try:
+			# Method 1: Press Enter key
+			await element_handle.press('Enter')
+			await asyncio.sleep(0.5)
+			
+			# Method 2: Trigger input event
+			await element_handle.evaluate('el => {el.dispatchEvent(new Event("input", { bubbles: true }));}')
+			await asyncio.sleep(0.3)
+			
+			# Method 3: Trigger change event
+			await element_handle.evaluate('el => {el.dispatchEvent(new Event("change", { bubbles: true }));}')
+			await asyncio.sleep(0.3)
+			
+			# Method 4: Trigger keyup event for search-as-you-type
+			await element_handle.evaluate('el => {el.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));}')
+			
+		except Exception as e:
+			logger.debug(f'Some search trigger methods failed: {str(e)}')
+
+	async def _wait_for_contact_search_results(self, search_query: str, timeout: int = 10000) -> list[str] | None:
+		"""
+		Wait for contact search results to appear on the page.
+		Returns a list of result text or None if no results found.
+		"""
+		try:
+			page = await self.get_agent_current_page()
+			
+			# Common selectors for search results
+			result_selectors = [
+				'.search-result', '.contact-result', '.user-result', '.person-result',
+				'[data-testid*="result"]', '[class*="result"]', '[class*="item"]',
+				'.dropdown-item', '.autocomplete-item', '.suggestion-item',
+				'li', '.list-item', '.item'
+			]
+			
+			# Wait for any of these result patterns to appear
+			for selector in result_selectors:
+				try:
+					results = await page.wait_for_selector(selector, timeout=2000)
+					if results:
+						break
+				except:
+					continue
+			else:
+				# If no specific selectors found, wait a bit for dynamic content
+				await asyncio.sleep(2)
+			
+			# Try to extract results from various patterns
+			results = await self._extract_contact_search_results(page, search_query)
+			return results
+			
+		except Exception as e:
+			logger.debug(f'Error waiting for search results: {str(e)}')
+			return None
+
+	async def _extract_contact_search_results(self, page: Page, search_query: str) -> list[str]:
+		"""
+		Extract contact search results from the page using various extraction strategies.
+		"""
+		try:
+			# Strategy 1: Look for common result containers
+			result_texts = []
+			
+			# Try to find results in common patterns
+			result_elements = await page.query_selector_all('.search-result, .contact-result, .user-result, .person-result, [data-testid*="result"]')
+			
+			if not result_elements:
+				# Strategy 2: Look for list items that might contain results
+				result_elements = await page.query_selector_all('li, .list-item, .item')
+			
+			if not result_elements:
+				# Strategy 3: Look for any elements that contain the search query
+				result_elements = await page.query_selector_all(f'*:has-text("{search_query}")')
+			
+			# Extract text from result elements
+			for element in result_elements[:10]:  # Limit to first 10 results
+				try:
+					text = await element.text_content()
+					if text and text.strip() and search_query.lower() in text.lower():
+						result_texts.append(text.strip())
+				except:
+					continue
+			
+			return result_texts
+			
+		except Exception as e:
+			logger.debug(f'Error extracting search results: {str(e)}')
+			return []
+
+	async def _select_first_contact_result(self, search_results: list[str]):
+		"""
+		Select the first contact search result.
+		"""
+		try:
+			page = await self.get_agent_current_page()
+			
+			# Try to click the first result
+			first_result_selectors = [
+				'.search-result:first-child', '.contact-result:first-child',
+				'.user-result:first-child', '.person-result:first-child',
+				'[data-testid*="result"]:first-child', '.dropdown-item:first-child',
+				'.autocomplete-item:first-child', '.suggestion-item:first-child'
+			]
+			
+			for selector in first_result_selectors:
+				try:
+					first_result = await page.wait_for_selector(selector, timeout=1000)
+					if first_result:
+						await first_result.click()
+						logger.debug(f'✅ Selected first search result: {search_results[0] if search_results else "Unknown"}')
+						return
+				except:
+					continue
+			
+			# Fallback: try to click any element containing the first result text
+			if search_results:
+				try:
+					first_result_element = await page.wait_for_selector(f'*:has-text("{search_results[0]}")', timeout=2000)
+					if first_result_element:
+						await first_result_element.click()
+						logger.debug(f'✅ Selected first search result via text matching')
+				except:
+					logger.debug('Could not select first result automatically')
+					
+		except Exception as e:
+			logger.debug(f'Error selecting first result: {str(e)}')
 
 	@time_execution_async('--click_element_node')
 	async def _click_element_node(self, element_node: DOMElementNode) -> str | None:
