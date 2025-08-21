@@ -29,6 +29,7 @@ from browser_use.controller.views import (
 	ScrollAction,
 	SearchContactAction,
 	SearchGoogleAction,
+	SelectMeetingParticipantAction,
 	SendKeysAction,
 	SwitchTabAction,
 )
@@ -188,8 +189,9 @@ class Controller(Generic[Context]):
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
 		@self.registry.action(
-			' when encounter “Search Users” plug-in window pops up,  the text input field with the placeholder like: “Enter a person’s name or department”. need input the search keywords into the text input field,if has search button, then click the search button,next action is to chose the first result',
+			' when encounter "Search Users" plug-in window pops up,  the text input field with the placeholder like: "Enter a person\'s name or department". need input the search keywords into the text input field,if has search button, then click the search button,next action is to chose the first result',
 			param_model=SearchContactAction,
+			domains=['a8demo.seeyoncloud.com/seeyon/meeting.do'],
 		)
 		async def search_contact(params: SearchContactAction, browser: BrowserContext):
 			if params.index not in await browser.get_selector_map():
@@ -209,6 +211,140 @@ class Controller(Generic[Context]):
 			logger.debug(f'Element xpath: {element_node.xpath}')
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
+		@self.registry.action(
+			'在会议页面选择参会人员：点击"与会人员"输入框，在弹出的搜索窗口中输入参会人员姓名进行搜索，并自动选择第一个搜索结果,点击确定按钮，如果搜索结果为空，则点击取消按钮',
+			param_model=SelectMeetingParticipantAction,
+			domains=['a8demo.seeyoncloud.com'],
+		)
+		async def select_meeting_participant(params: SelectMeetingParticipantAction, browser: BrowserContext):
+			page = await browser.get_current_page()
+			
+			try:
+				try:
+					# 步骤1: 查找并点击"与会人员"输入框
+					participant_input = None
+					selector_map = await browser.get_selector_map()
+					
+					if params.search_input_index is not None:
+						# 如果提供了具体的索引，直接使用
+						if params.search_input_index not in selector_map:
+							raise Exception(f'Element index {params.search_input_index} does not exist')
+						participant_input = await browser.get_dom_element_by_index(params.search_input_index)
+					else:
+						# 自动查找包含"与会人员"相关文本的输入框
+						for index, element in selector_map.items():
+							element_text = element.get_all_text_till_next_clickable_element(max_depth=1)
+							if any(keyword in element_text for keyword in ['与会人员', '参会人员', '参会人', 'participant', 'attendee']):
+								participant_input = element
+								logger.info(f'Found participant input field at index {index}: {element_text}')
+								break
+						
+						if not participant_input:
+							raise Exception('Could not find participant input field automatically')
+					
+					# 步骤2: 点击输入框，触发搜索窗口弹出
+					element_handle = await browser.get_locate_element(participant_input)
+					if not element_handle:
+						raise Exception('Could not locate participant input element')
+					
+					await element_handle.click()
+					await asyncio.sleep(0.5)  # 等待搜索窗口弹出
+				except Exception as e:
+						logger.error(f'Error locating participant input element: {e}')
+
+				# 步骤3: 在搜索窗口中输入参会人员姓名
+				# 查找搜索输入框（通常在弹出窗口中）
+				await asyncio.sleep(5)  
+				search_input_selectors = [
+					'input[placeholder*="请输入部门/人员名称"]'
+				]
+
+				# await iframeContent.query_selector('//input[@id="cBeginTime"]')
+				# create_button = await iframeContent.query_selector('//button[contains(@onclick, "addPage2")]')
+				iframeSelector = '//iframe[contains(@id, "selectPeopleFrane")]'
+				iframe = await page.query_selector(iframeSelector);
+				iframeContent = await iframe.content_frame()
+				search_input = None
+				for selector in search_input_selectors:
+					try:
+						search_input = await iframeContent.wait_for_selector(selector, timeout=500)
+						if search_input:
+							logger.info(f'Found search input with selector: {selector}')
+							break
+					except:
+						continue
+				
+				if not search_input:
+					raise Exception('Could not find search input in popup window')
+				
+				# 清空并输入搜索内容
+				await search_input.fill('')
+				await search_input.type(params.participant_name, delay=100)
+				logger.info(f'Input search query: {params.participant_name}')
+				
+				# 步骤4: 触发搜索
+				if params.search_button_index is not None:
+					# 如果提供了搜索按钮索引，点击它
+					if params.search_button_index not in selector_map:
+						raise Exception(f'Search button index {params.search_button_index} does not exist')
+					search_button = await browser.get_dom_element_by_index(params.search_button_index)
+					search_button_handle = await browser.get_locate_element(search_button)
+					if search_button_handle:
+						await search_button_handle.click()
+						logger.info('Clicked search button')
+				else:
+					# 自动触发搜索（按回车键）
+					await search_input.press('Enter')
+					logger.info('Triggered search with Enter key')
+				
+				await asyncio.sleep(5)  # 等待搜索结果加载
+				
+				# 步骤5: 选择第一个搜索结果（如果启用）
+				if params.select_first_result:
+					# 查找搜索结果
+					result_selectors = [
+						'//div[contains(@class, "sroll-list-box")]/div[@class="infinite-container"]/div/div[1]',
+					]
+					
+					first_result = None
+					for selector in result_selectors:
+						try:
+							first_result = await iframeContent.wait_for_selector(f'{selector}', timeout=500)
+							if first_result:
+								logger.info(f'Found first result with selector: {selector}')
+								break
+						except Exception as e:
+							logger.error(f'Error finding first result with selector: {selector} - {e}')
+							continue
+					
+					if first_result:
+						await first_result.click()
+						logger.info('Selected first search result')
+						msg = f'✅ 成功选择参会人员: {params.participant_name}'
+						await asyncio.sleep(5)  
+						confirm_button = await page.wait_for_selector('//div[@class="selectorg-btn"]//a[contains(@class, "ok")]', timeout=500)
+						if confirm_button:
+							await confirm_button.click()
+							logger.info('Clicked confirm button')
+					else:
+						logger.warning('No search results found to select')
+						msg = f'⚠️  搜索到参会人员: {params.participant_name}，但未找到可选择的搜索结果'
+						cancel_button = await page.wait_for_selector('//div[@class="selectorg-btn"]//a[contains(@class, "cancel")]', timeout=500)
+						if cancel_button:
+							await cancel_button.click()
+							logger.info('Clicked cancel button')
+				else:
+					msg = f'🔍 已搜索参会人员: {params.participant_name}'
+				
+				logger.info(msg)
+				return ActionResult(extracted_content=msg, include_in_memory=True)
+			
+			except Exception as e:
+				error_msg = f'选择参会人员失败: {str(e)}'
+				logger.error(error_msg)
+				return ActionResult(error=error_msg, include_in_memory=True)
+
+		
 		# Save PDF
 		@self.registry.action(
 			'Save the current page as a PDF file',

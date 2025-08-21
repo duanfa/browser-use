@@ -102,3 +102,10 @@ class SearchContactAction(BaseModel):
     index: int = Field(..., description='搜索输入框的id, 例如："search-input"')
     search_query: str = Field(..., description='搜索关键字')
     search_button_id: int| None = Field(None, description='搜索按钮的id, 例如："search-button"')
+
+
+class SelectMeetingParticipantAction(BaseModel):
+    participant_name: str = Field(..., description='要选择的参会人员姓名')
+    search_input_index: int | None = Field(None, description='搜索输入框的索引，如果不提供则自动查找')
+    search_button_index: int | None = Field(None, description='搜索按钮的索引，如果不提供则自动查找')
+    select_first_result: bool = Field(True, description='是否自动选择第一个搜索结果')
