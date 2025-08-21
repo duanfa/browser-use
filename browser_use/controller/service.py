@@ -27,7 +27,6 @@ from browser_use.controller.views import (
 	OpenTabAction,
 	Position,
 	ScrollAction,
-	SearchContactAction,
 	SearchGoogleAction,
 	SelectMeetingParticipantAction,
 	SendKeysAction,
@@ -184,29 +183,6 @@ class Controller(Generic[Context]):
 			element_node = await browser.get_dom_element_by_index(params.index)
 			await browser._input_time_element_node(element_node, params.time_value, params.time_format)
 			msg = f'⏰  Input time value {params.time_value} into index {params.index}'
-			logger.info(msg)
-			logger.debug(f'Element xpath: {element_node.xpath}')
-			return ActionResult(extracted_content=msg, include_in_memory=True)
-
-		@self.registry.action(
-			' when encounter "Search Users" plug-in window pops up,  the text input field with the placeholder like: "Enter a person\'s name or department". need input the search keywords into the text input field,if has search button, then click the search button,next action is to chose the first result',
-			param_model=SearchContactAction,
-			domains=['a8demo.seeyoncloud.com/seeyon/meeting.do'],
-		)
-		async def search_contact(params: SearchContactAction, browser: BrowserContext):
-			if params.index not in await browser.get_selector_map():
-				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
-
-			element_node = await browser.get_dom_element_by_index(params.index)
-			search_result = await browser._search_contact_element_node(
-				element_node, 
-				params.search_query, 
-				params.search_button_id
-			)
-			
-			msg = f'🔍  Searched for contact "{params.search_query}" in index {params.index}'
-			if search_result:
-				msg += f', found: {search_result}'
 			logger.info(msg)
 			logger.debug(f'Element xpath: {element_node.xpath}')
 			return ActionResult(extracted_content=msg, include_in_memory=True)
