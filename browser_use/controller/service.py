@@ -22,16 +22,17 @@ from browser_use.controller.views import (
 	DragDropAction,
 	GoToUrlAction,
 	InputTextAction,
-	InputTimeAction,
 	NoParamsAction,
 	OpenTabAction,
 	Position,
 	ScrollAction,
 	SearchGoogleAction,
-	SelectMeetingParticipantAction,
+	SelectParticipantAction,
 	SendKeysAction,
 	SwitchTabAction,
 	ApplyMeetingRoomAction,
+	InputRangeTimeAction,
+	ValidateFormFieldsAction,
 )
 from browser_use.utils import time_execution_sync
 
@@ -118,7 +119,7 @@ class Controller(Generic[Context]):
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
 		# Element Interaction Actions
-		@self.registry.action('Click element by index,if the element is data time input text field, need use input_time action instead', param_model=ClickElementAction)
+		@self.registry.action('Click element by index', param_model=ClickElementAction)
 		async def click_element_by_index(params: ClickElementAction, browser: BrowserContext):
 			session = await browser.get_session()
 
@@ -156,7 +157,7 @@ class Controller(Generic[Context]):
 				return ActionResult(error=str(e))
 
 		@self.registry.action(
-			'Input text into a input interactive element, if the value is data time value, need use input_time action instead',
+			'Input text into a input interactive element',
 			param_model=InputTextAction,
 		)
 		async def input_text(params: InputTextAction, browser: BrowserContext, has_sensitive_data: bool = False):
@@ -173,27 +174,79 @@ class Controller(Generic[Context]):
 			logger.debug(f'Element xpath: {element_node.xpath}')
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
+		# @self.registry.action(
+		# 	'Input time value into a time input element (datetime-local, time, date input types), before input the time value, must do not click the time input element,  avoid the javascript  plug-in window pops up  and change the page elements',
+		# 	param_model=InputTimeAction,
+		# )
+		# async def input_time(params: InputTimeAction, browser: BrowserContext):
+		# 	if params.index not in await browser.get_selector_map():
+		# 		raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
+
+		# 	element_node = await browser.get_dom_element_by_index(params.index)
+		# 	await browser._input_time_element_node(element_node, params.time_value, params.time_format)
+		# 	msg = f'⏰  Input time value {params.time_value} into index {params.index}'
+		# 	logger.info(msg)
+		# 	logger.debug(f'Element xpath: {element_node.xpath}')
+		# 	return ActionResult(extracted_content=msg, include_in_memory=True)
+		
+		
+		# 注册一个提交表单验证字段的Action
 		@self.registry.action(
-			'Input time value into a time input element (datetime-local, time, date input types), before input the time value, must do not click the time input element,  avoid the javascript  plug-in window pops up  and change the page elements',
-			param_model=InputTimeAction,
+			'提交表单前进行字段校验，确保所有必填项已填写且格式正确，适用于需要前端校验的表单场景',
+			param_model=ValidateFormFieldsAction,
+			domains=['a8demo.seeyoncloud.com'],
 		)
-		async def input_time(params: InputTimeAction, browser: BrowserContext):
+		async def validate_form_fields(params: ValidateFormFieldsAction, browser: BrowserContext):
+			"""
+			执行表单字段校验，适用于提交前需要检查必填项和格式的场景。
+			"""
+			page = await browser.get_current_page()
+			submit_button = await browser.get_dom_element_by_index(params.index)
+			submit_button_handle = await browser.get_locate_element(submit_button)
+			if not submit_button_handle:
+				raise Exception('Could not locate submit button')
+			await submit_button_handle.click()
+			await asyncio.sleep(2)
+			await page.wait_for_load_state()
+			# 判断当前page是否已经关闭，如果关闭则抛出异常
+			if page.is_closed():
+				success = True
+				is_done = True
+				msg = "提交成功，页面已关闭。"
+				return ActionResult(extracted_content=msg, include_in_memory=True,success=success,is_done=is_done)
+			else:
+				success = False
+				is_done = False
+				msg = "表单字段校验不通过，请检查表单字段。"
+				logger.info(msg)	
+				return ActionResult(extracted_content=msg, include_in_memory=True,success=success,is_done=is_done)
+			
+		@self.registry.action(
+			'页面中存在选择时间范围的控件，同一个输入框需要同时输入开始时间和结束时间，两个时间格式是YYYY-MM-DD HH:MM，包含但不限于：会议申请页面、会议室申请页面',
+			param_model=InputRangeTimeAction,
+			domains=['a8demo.seeyoncloud.com'],
+		)
+		async def input_range_time(params: InputRangeTimeAction, browser: BrowserContext):
 			if params.index not in await browser.get_selector_map():
 				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
-
+			page = await browser.get_current_page()
+		
 			element_node = await browser.get_dom_element_by_index(params.index)
-			await browser._input_time_element_node(element_node, params.time_value, params.time_format)
-			msg = f'⏰  Input time value {params.time_value} into index {params.index}'
+			if not element_node:
+				element_node = await page.wait_for_selector('//div[contains(@class, "CtpUiDateRange")]', timeout=500)
+			
+			await browser.input_range_time(element_node, params.start_time_value, params.end_time_value, page, params.time_format)
+			msg = f'⏰  Input time value {params.start_time_value} and {params.end_time_value} into index {params.index}'
 			logger.info(msg)
 			logger.debug(f'Element xpath: {element_node.xpath}')
 			return ActionResult(extracted_content=msg, include_in_memory=True)
 
 		@self.registry.action(
-			'在会议页面选择参会人员：点击"与会人员"输入框，在弹出的搜索窗口中输入参会人员姓名进行搜索，并自动选择第一个搜索结果,点击确定按钮，如果搜索结果为空，则点击取消按钮',
-			param_model=SelectMeetingParticipantAction,
+			'人员选择控件，包括但不限于：会议申请页面的与会人员、告知人员等，需要点击人员选择控件，在弹出的搜索窗口中输入参会人员姓名进行搜索',
+			param_model=SelectParticipantAction,
 			domains=['a8demo.seeyoncloud.com'],
 		)
-		async def select_meeting_participant(params: SelectMeetingParticipantAction, browser: BrowserContext):
+		async def select_participant(params: SelectParticipantAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			
 			try:
@@ -231,7 +284,7 @@ class Controller(Generic[Context]):
 
 				# 步骤3: 在搜索窗口中输入参会人员姓名
 				# 查找搜索输入框（通常在弹出窗口中）
-				await asyncio.sleep(1)  
+				await asyncio.sleep(0.5)  
 				search_input_selectors = [
 					'input[placeholder*="请输入部门/人员名称"]'
 				]
@@ -260,58 +313,47 @@ class Controller(Generic[Context]):
 				logger.info(f'Input search query: {params.participant_name}')
 				
 				# 步骤4: 触发搜索
-				if params.search_button_index is not None:
-					# 如果提供了搜索按钮索引，点击它
-					if params.search_button_index not in selector_map:
-						raise Exception(f'Search button index {params.search_button_index} does not exist')
-					search_button = await browser.get_dom_element_by_index(params.search_button_index)
-					search_button_handle = await browser.get_locate_element(search_button)
-					if search_button_handle:
-						await search_button_handle.click()
-						logger.info('Clicked search button')
-				else:
-					# 自动触发搜索（按回车键）
-					await search_input.press('Enter')
-					logger.info('Triggered search with Enter key')
 				
-				await asyncio.sleep(2)  # 等待搜索结果加载
+				await search_input.press('Enter')
+				logger.info('Triggered search with Enter key')
+				
+				await asyncio.sleep(0.5)  # 等待搜索结果加载
 				
 				# 步骤5: 选择第一个搜索结果（如果启用）
-				if params.select_first_result:
 					# 查找搜索结果
-					result_selectors = [
-						'//div[contains(@class, "sroll-list-box")]/div[@class="infinite-container"]/div/div[1]',
-					]
-					
-					first_result = None
-					for selector in result_selectors:
-						try:
-							first_result = await iframeContent.wait_for_selector(f'{selector}', timeout=500)
-							if first_result:
-								logger.info(f'Found first result with selector: {selector}')
-								break
-						except Exception as e:
-							logger.error(f'Error finding first result with selector: {selector} - {e}')
-							continue
-					
-					if first_result:
-						await first_result.click()
-						logger.info('Selected first search result')
-						msg = f'✅ 成功选择参会人员: {params.participant_name}'
-						await asyncio.sleep(2)  
-						confirm_button = await page.wait_for_selector('//div[@class="selectorg-btn"]//a[contains(@class, "ok")]', timeout=500)
-						if confirm_button:
-							await confirm_button.click()
-							logger.info('Clicked confirm button')
-					else:
-						logger.warning('No search results found to select')
-						msg = f'⚠️  搜索到参会人员: {params.participant_name}，但未找到可选择的搜索结果'
-						cancel_button = await page.wait_for_selector('//div[@class="selectorg-btn"]//a[contains(@class, "cancel")]', timeout=500)
-						if cancel_button:
-							await cancel_button.click()
-							logger.info('Clicked cancel button')
+				result_selectors = [
+					'//div[contains(@class, "sroll-list-box")]/div[@class="infinite-container"]/div/div[1]',
+				]
+				
+				first_result = None
+				for selector in result_selectors:
+					try:
+						first_result = await iframeContent.wait_for_selector(f'{selector}', timeout=500)
+						if first_result:
+							logger.info(f'Found first result with selector: {selector}')
+							break
+					except Exception as e:
+						logger.error(f'Error finding first result with selector: {selector} - {e}')
+						continue
+				
+				if first_result:
+					await first_result.click()
+					logger.info('Selected first search result')
+					msg = f'✅ 成功选择参会人员: {params.participant_name}'
+					await asyncio.sleep(0.1)  
+					confirm_button = await page.wait_for_selector('//div[@class="selectorg-btn"]//a[contains(@class, "ok")]', timeout=500)
+					if confirm_button:
+						await confirm_button.click()
+						logger.info('Clicked confirm button')
 				else:
-					msg = f'🔍 已搜索参会人员: {params.participant_name}'
+					logger.warning('No search results found to select')
+					msg = f'⚠️  搜索参会人员: {params.participant_name}，但未找到可选择的搜索结果'
+					cancel_button = await page.wait_for_selector('//div[@class="selectorg-btn"]//a[contains(@class, "cancel")]', timeout=500)
+					if cancel_button:
+						await cancel_button.click()
+						error_msg = f'选择参会人员失败: {str(e)}'
+						logger.error(error_msg)
+						return ActionResult(error=error_msg, include_in_memory=True)
 				
 				logger.info(msg)
 				return ActionResult(extracted_content=msg, include_in_memory=True)

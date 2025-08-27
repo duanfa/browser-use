@@ -97,12 +97,18 @@ class InputTimeAction(BaseModel):
 	time_format: str | None = Field(None, description='可选的时间格式，如果不提供则自动检测')
 	xpath: str | None = None
 
+class InputRangeTimeAction(BaseModel):
+	index: int
+	start_time_value: str = Field(..., description='时间值，格式必须是:"YYYY-MM-DD HH:MM"')
+	end_time_value: str = Field(..., description='时间值，格式必须是:"YYYY-MM-DD HH:MM"')
+	time_format: str | None = Field(None, description='可选的时间格式，如果不提供则自动检测')
+	xpath: str | None = None
 
-class SelectMeetingParticipantAction(BaseModel):
+
+
+class SelectParticipantAction(BaseModel):
     participant_name: str = Field(..., description='要选择的参会人员姓名')
     search_input_index: int | None = Field(None, description='搜索输入框的索引，如果不提供则自动查找')
-    search_button_index: int | None = Field(None, description='搜索按钮的索引，如果不提供则自动查找')
-    select_first_result: bool = Field(True, description='是否自动选择第一个搜索结果')
 
 
 class ApplyMeetingRoomAction(BaseModel):
@@ -110,3 +116,6 @@ class ApplyMeetingRoomAction(BaseModel):
     start_time: str = Field(..., description='会议开始时间，格式：YYYY-MM-DD HH:MM')
     end_time: str = Field(..., description='会议结束时间，格式：YYYY-MM-DD HH:MM')
     apply_button_index: int | None = Field(None, description='申请会议室按钮的索引，如果不提供则自动查找')
+
+class ValidateFormFieldsAction(BaseModel):
+    index: int = Field(..., description='提交按钮的索引')

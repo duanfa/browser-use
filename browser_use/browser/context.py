@@ -59,79 +59,79 @@ class BrowserContextConfig(BaseModel):
 	Configuration for the BrowserContext.
 
 	Default values:
-	    cookies_file: None
-	        Path to cookies file for persistence
+		cookies_file: None
+			Path to cookies file for persistence
 
 		disable_security: False
 			Disable browser security features (dangerous, but cross-origin iframe support requires it)
 
-	    minimum_wait_page_load_time: 0.5
-	        Minimum time to wait before getting page state for LLM input
+		minimum_wait_page_load_time: 0.5
+			Minimum time to wait before getting page state for LLM input
 
 		wait_for_network_idle_page_load_time: 1.0
 			Time to wait for network requests to finish before getting page state.
 			Lower values may result in incomplete page loads.
 
-	    maximum_wait_page_load_time: 5.0
-	        Maximum time to wait for page load before proceeding anyway
+		maximum_wait_page_load_time: 5.0
+			Maximum time to wait for page load before proceeding anyway
 
-	    wait_between_actions: 1.0
-	        Time to wait between multiple per step actions
+		wait_between_actions: 1.0
+			Time to wait between multiple per step actions
 
-	    window_width: 1280
-	    window_height: 1100
-	        Default browser window dimensions
+		window_width: 1280
+		window_height: 1100
+			Default browser window dimensions
 
-	    no_viewport: True
-	        When True (default), the browser window size determines the viewport.
-	        When False, forces a fixed viewport size using window_width and window_height. (constraint of the rendered content to a smaller area than the default of the entire window size)
+		no_viewport: True
+			When True (default), the browser window size determines the viewport.
+			When False, forces a fixed viewport size using window_width and window_height. (constraint of the rendered content to a smaller area than the default of the entire window size)
 
-	    save_recording_path: None
-	        Path to save video recordings
+		save_recording_path: None
+			Path to save video recordings
 
-	    save_downloads_path: None
-	        Path to save downloads to
+		save_downloads_path: None
+			Path to save downloads to
 
-	    trace_path: None
-	        Path to save trace files. It will auto name the file with the TRACE_PATH/{context_id}.zip
+		trace_path: None
+			Path to save trace files. It will auto name the file with the TRACE_PATH/{context_id}.zip
 
-	    locale: None
-	        Specify user locale, for example en-GB, de-DE, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting rules. If not provided, defaults to the system default locale.
+		locale: None
+			Specify user locale, for example en-GB, de-DE, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting rules. If not provided, defaults to the system default locale.
 
-	    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
-	        custom user agent to use.
+		user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
+			custom user agent to use.
 
-	    highlight_elements: True
-	        Highlight elements in the DOM on the screen
+		highlight_elements: True
+			Highlight elements in the DOM on the screen
 
-	    viewport_expansion: 0
-	        Viewport expansion in pixels. This amount will increase the number of elements which are included in the state what the LLM will see. If set to -1, all elements will be included (this leads to high token usage). If set to 0, only the elements which are visible in the viewport will be included.
+		viewport_expansion: 0
+			Viewport expansion in pixels. This amount will increase the number of elements which are included in the state what the LLM will see. If set to -1, all elements will be included (this leads to high token usage). If set to 0, only the elements which are visible in the viewport will be included.
 
-	    allowed_domains: None
-	        List of allowed domains that can be accessed. If None, all domains are allowed.
-	        Example: ['example.com', 'api.example.com']
+		allowed_domains: None
+			List of allowed domains that can be accessed. If None, all domains are allowed.
+			Example: ['example.com', 'api.example.com']
 
-	    include_dynamic_attributes: bool = True
-	        Include dynamic attributes in the CSS selector. If you want to reuse the css_selectors, it might be better to set this to False.
+		include_dynamic_attributes: bool = True
+			Include dynamic attributes in the CSS selector. If you want to reuse the css_selectors, it might be better to set this to False.
 
 		  http_credentials: None
 	  Dictionary with HTTP basic authentication credentials for corporate intranets (only supports one set of credentials for all URLs at the moment), e.g.
 	  {"username": "bill", "password": "pa55w0rd"}
 
-	    is_mobile: None
-	        Whether the meta viewport tag is taken into account and touch events are enabled.
+		is_mobile: None
+			Whether the meta viewport tag is taken into account and touch events are enabled.
 
-	    has_touch: None
-	        Whether to enable touch events in the browser.
+		has_touch: None
+			Whether to enable touch events in the browser.
 
-	    geolocation: None
-	        Geolocation to be used in the browser context. Example: {'latitude': 59.95, 'longitude': 30.31667}
+		geolocation: None
+			Geolocation to be used in the browser context. Example: {'latitude': 59.95, 'longitude': 30.31667}
 
-	    permissions: ['clipboard-read', 'clipboard-write']
-	        Browser permissions to grant. See full list here: https://playwright.dev/python/docs/api/class-browsercontext#browser-context-grant-permissions
+		permissions: ['clipboard-read', 'clipboard-write']
+			Browser permissions to grant. See full list here: https://playwright.dev/python/docs/api/class-browsercontext#browser-context-grant-permissions
 
-	    timezone_id: None
-	        Changes the timezone of the browser. Example: 'Europe/Berlin'
+		timezone_id: None
+			Changes the timezone of the browser. Example: 'Europe/Berlin'
 
 		force_new_context: False
 			Forces a new browser context to be created. Useful when running locally with branded browser (e.g Chrome, Edge) and setting a custom config.
@@ -390,10 +390,10 @@ class BrowserContext:
 		TODO: pester the playwright team to add a new event that fires when a headful tab is focused.
 		OR implement a browser-use chrome extension that acts as a bridge to the chrome.tabs API.
 
-		        - https://github.com/microsoft/playwright/issues/1290
-		        - https://github.com/microsoft/playwright/issues/2286
-		        - https://github.com/microsoft/playwright/issues/3570
-		        - https://github.com/microsoft/playwright/issues/13989
+				- https://github.com/microsoft/playwright/issues/1290
+				- https://github.com/microsoft/playwright/issues/2286
+				- https://github.com/microsoft/playwright/issues/3570
+				- https://github.com/microsoft/playwright/issues/13989
 		"""
 
 		def trunc(s, max_len=None):
@@ -1313,22 +1313,22 @@ class BrowserContext:
 			page = await self.get_agent_current_page()
 			await page.evaluate(
 				"""
-                try {
-                    // Remove the highlight container and all its contents
-                    const container = document.getElementById('playwright-highlight-container');
-                    if (container) {
-                        container.remove();
-                    }
+				try {
+					// Remove the highlight container and all its contents
+					const container = document.getElementById('playwright-highlight-container');
+					if (container) {
+						container.remove();
+					}
 
-                    // Remove highlight attributes from elements
-                    const highlightedElements = document.querySelectorAll('[browser-user-highlight-id^="playwright-highlight-"]');
-                    highlightedElements.forEach(el => {
-                        el.removeAttribute('browser-user-highlight-id');
-                    });
-                } catch (e) {
-                    console.error('Failed to remove highlights:', e);
-                }
-                """
+					// Remove highlight attributes from elements
+					const highlightedElements = document.querySelectorAll('[browser-user-highlight-id^="playwright-highlight-"]');
+					highlightedElements.forEach(el => {
+						el.removeAttribute('browser-user-highlight-id');
+					});
+				} catch (e) {
+					console.error('Failed to remove highlights:', e);
+				}
+				"""
 			)
 		except Exception as e:
 			logger.debug(f'⚠  Failed to remove highlights (this is usually ok): {str(e)}')
@@ -1403,10 +1403,10 @@ class BrowserContext:
 		Creates a CSS selector for a DOM element, handling various edge cases and special characters.
 
 		Args:
-		        element: The DOM element to create a selector for
+				element: The DOM element to create a selector for
 
 		Returns:
-		        A valid CSS selector string
+				A valid CSS selector string
 		"""
 		try:
 			# Get base selector from XPath
@@ -1700,6 +1700,300 @@ class BrowserContext:
 		except Exception as e:
 			logger.debug(f'❌  Failed to input text into element: {repr(element_node)}. Error: {str(e)}')
 			raise BrowserError(f'Failed to input text into index {element_node.highlight_index}')
+
+	@time_execution_async('--input_range_time')	
+	async def input_range_time(self, element_node: DOMElementNode, start_time_value: str, end_time_value: str, page,time_format: str | None):
+			
+		# time_input = await page.wait_for_selector('//input[@id="meetingTime"]', timeout=500)
+		element_handle = await self.get_locate_element(element_node)
+		await element_handle.click()
+		calStartYear = await page.wait_for_selector('//div[@id="doubleDate"]//span[@class="calendar_month_label_year"]', timeout=1000)
+		calStartMonth = await page.wait_for_selector('//div[@id="doubleDate"]//span[@class="calendar_month_label_month"]', timeout=1000)
+		print(await calStartYear.text_content())
+		print(await calStartMonth.text_content())
+
+		match_time = re.match(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{1,2})', start_time_value)
+		
+		start_year = int(match_time.group(1))
+		start_month = int(match_time.group(2))
+		start_day = int(match_time.group(3))
+		start_hour = int(match_time.group(4))
+		start_minute = int(match_time.group(5))
+		print("start_time:"+str(start_year)+str(start_month)+str(start_day)+str(start_hour)+str(start_minute))
+	
+		match_time = re.match(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{1,2})', end_time_value)
+	
+		end_year = int(match_time.group(1))
+		end_month = int(match_time.group(2))
+		end_day = int(match_time.group(3))
+		end_hour = int(match_time.group(4))
+		end_minute = int(match_time.group(5))
+		print("end_time:"+str(end_year)+str(end_month)+str(end_day)+str(end_hour)+str(end_minute))
+
+		while True:
+			leftYearAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_year_arrow syIcon sy-double-arrow-left"]')
+			rightYearAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_year_arrow syIcon sy-double-arrow-right"]')
+
+			leftMonthAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_month_arrow syIcon sy-arrow-left"]')
+			rightMonthAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_month_arrow syIcon sy-arrow-right"]')
+
+			calYearAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_month_label_year"]')
+			calMonthAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_month_label_month"]')
+			
+			calHoursAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_label_hours"]')
+			calMinutesAll = await page.query_selector_all('//div[@id="doubleDate"]//span[@class="calendar_label_minutes"]')
+
+
+
+	
+			start_cal_year = int(await calYearAll[0].text_content())
+		
+			end_cal_year = int(await calYearAll[1].text_content())
+	
+			start_cal_month = int((await calMonthAll[0].text_content()).replace("月", ""))
+		
+			end_cal_month = int((await calMonthAll[1].text_content()).replace("月", ""))
+
+			start_cal_hours = int(await calHoursAll[0].text_content())
+			start_cal_minutes = int(await calMinutesAll[0].text_content())  
+
+			end_cal_hours = int(await calHoursAll[1].text_content())
+			end_cal_minutes = int(await calMinutesAll[1].text_content())	
+
+			logger.info(f'解析到日历年月: {start_cal_year}年{start_cal_month}月')
+
+			if int(start_cal_year) > start_year:
+				start_year_left_button = leftYearAll[0]
+				if start_year_left_button:
+					await start_year_left_button.click()
+					await asyncio.sleep(0.5)
+					continue		
+			elif start_cal_year < start_year:
+				start_year_right_button = rightYearAll[0]
+				if start_year_right_button:
+					await start_year_right_button.click()
+					await asyncio.sleep(0.5)
+					continue
+
+			if end_cal_year > end_year:
+				end_year_left_button = leftYearAll[1]
+				if end_year_left_button:
+					await end_year_left_button.click()
+					await asyncio.sleep(0.5)
+					continue		
+			elif end_cal_year < end_year:
+				end_year_right_button = rightYearAll[1]
+				if end_year_right_button:
+					await end_year_right_button.click()
+					await asyncio.sleep(0.5)
+					continue
+			
+			if start_cal_month > start_month:
+				start_month_left_button = leftMonthAll[0]
+				if start_month_left_button:
+						await start_month_left_button.click()
+						await asyncio.sleep(0.5)
+						continue
+			elif start_cal_month < start_month:
+				start_month_right_button = rightMonthAll[0]
+				if start_month_right_button:
+					await start_month_right_button.click()
+					await asyncio.sleep(0.5)
+					continue
+
+			if end_cal_month > end_month:
+				end_month_left_button = leftMonthAll[1]
+				if end_month_left_button:
+						await end_month_left_button.click()
+						await asyncio.sleep(0.5)
+						continue
+			elif end_cal_month < end_month:
+				end_month_right_button = rightMonthAll[1]
+				if end_month_right_button:
+					await end_month_right_button.click()
+					await asyncio.sleep(0.5)
+					continue
+			
+			
+			chose_DayAll = await page.query_selector_all('//div[@id="doubleDate"]//li[contains(@class, "dhtmlxcalendar_cell_month")]/div[contains(@class,"dhtmlxcalendar_label") and text()="'+str(start_day)+'"]')
+			if len(chose_DayAll) > 0:
+				chose_Day = chose_DayAll[0]
+				logger.debug(f"找到开始日期元素: {start_day}")
+				# ElementHandle没有xpath属性，获取其他信息
+				try:
+					parent_path = await chose_Day.evaluate("""
+						function(el) {
+							let path = [];
+							let current = el;
+							while (current) {
+								let id = current.id ? '@id="' + current.id + '"' : '';
+								let className = current.className ? '@class="' + current.className + '"' : '';
+								let extra = [id, className].filter(Boolean).join('-');
+								if (extra) {
+									path.unshift(current.tagName.toLowerCase() + '[' + extra + ']');
+								} else {
+									path.unshift(current.tagName.toLowerCase());
+								}
+								current = current.parentElement;
+							}
+							return path.join('/');
+						}
+					""")
+					logger.debug(f"开始日期元素: 父级路径={parent_path}")
+				except Exception as e:
+					logger.debug(f"无法获取开始日期元素详细信息: {str(e)}")
+				# 尝试多种点击方法
+				try:
+					# 方法1：直接点击
+					await chose_Day.click(timeout=500)
+					logger.debug("开始日期直接点击成功")
+				except Exception as e:
+					logger.debug(f"开始日期直接点击失败: {str(e)}")
+				await asyncio.sleep(0.5)
+				
+			chose_DayAll = await page.query_selector_all('//div[@id="doubleDate"]//li[contains(@class, "dhtmlxcalendar_cell_month")]/div[contains(@class,"dhtmlxcalendar_label") and text()="'+str(end_day)+'"]')
+			if len(chose_DayAll) > 0:
+				chose_Day = chose_DayAll[0]
+				if len(chose_DayAll) > 1:
+					chose_Day = chose_DayAll[1]
+				logger.debug(f"找到开始日期元素: {start_day}")
+				# ElementHandle没有xpath属性，获取其他信息
+				try:
+					parent_path = await chose_Day.evaluate("""
+						function(el) {
+							let path = [];
+							let current = el;
+							while (current) {
+								let id = current.id ? '@id="' + current.id + '"' : '';
+								let className = current.className ? '@class="' + current.className + '"' : '';
+								let extra = [id, className].filter(Boolean).join('-');
+								if (extra) {
+									path.unshift(current.tagName.toLowerCase() + '[' + extra + ']');
+								} else {
+									path.unshift(current.tagName.toLowerCase());
+								}
+								current = current.parentElement;
+							}
+							return path.join('/');
+						}
+					""")
+					logger.debug(f"结束日期元素: 父级路径={parent_path}")
+				except Exception as e:
+					logger.debug(f"无法获取结束日期元素详细信息: {str(e)}")
+				logger.debug(f"找到结束日期元素: {end_day}")
+				# ElementHandle没有xpath属性，获取其他信息
+				try:
+					tag_name = await chose_Day.evaluate("el => el.tagName")
+					class_name = await chose_Day.get_attribute("class")
+					text_content = await chose_Day.text_content()
+					logger.debug(f"开始日期元素: 标签={tag_name}, 类={class_name}, 文本={text_content}")
+				except Exception as e:
+					logger.debug(f"无法获取开始日期元素详细信息: {str(e)}")
+				# 尝试多种点击方法
+				try:
+					# 方法1：直接点击
+					await chose_Day.click(timeout=500)
+					logger.debug("结束日期直接点击成功")
+				except Exception as e:
+					logger.debug(f"结束日期直接点击失败: {str(e)}")
+				await asyncio.sleep(0.5)
+
+
+			select_hour_all = await page.query_selector_all('//div[@id="doubleDate"]//ul[@class="calendar_line common_txtbox_wrap comp_select_ctl"]')
+			if start_cal_hours == start_hour and start_cal_minutes == start_minute:
+				print("开始时间选择完成")
+			else:
+				# page = await iframe.content_frame()
+				if select_hour_all:
+					await select_hour_all[0].click()
+					await asyncio.sleep(0.5)
+					hour_str = ""
+					if start_hour < 10:
+						hour_str = "0"+str(start_hour)
+					else:
+						hour_str = str(start_hour)
+					hour_select = await page.query_selector_all('//div[@class="ivu-picker-panel-content"]//li[ contains(@class,"ivu-time-picker-cells-cell") and @type="hour" and text()="'+hour_str+'"]')
+					await hour_select[0].click()
+					await asyncio.sleep(0.5)
+					minute_value = 0
+					minute_str = ""
+					while True:
+						if minute_value < start_minute:
+							if minute_value + 5 > start_minute:
+								break
+							minute_value += 5
+						if minute_value == start_minute:
+							break
+						if minute_value > 55   :
+							minute_value = 55
+							break
+					if minute_value == 0:
+						minute_str = "00"
+					elif minute_value == 5:
+						minute_str = "05"
+					else:
+						minute_str = str(minute_value)
+					minute_select = await page.query_selector_all('//div[@class="ivu-picker-panel-content"]//li[ contains(@class,"ivu-time-picker-cells-cell") and @type="min" and text()="'+minute_str+'"]')
+					await minute_select[0].click()
+					await asyncio.sleep(0.5)
+					await select_hour_all[0].click()
+					await asyncio.sleep(0.5)
+
+			if end_cal_hours == end_hour and end_cal_minutes == end_minute:
+				print("结束时间选择完成")
+			else:
+				if select_hour_all:
+					await select_hour_all[1].click()
+					await asyncio.sleep(0.5)
+					hour_str = ""
+					if end_hour < 10:
+						hour_str = "0"+str(end_hour)
+					else:
+						hour_str = str(end_hour)
+					hour_select = await page.query_selector_all('//div[@class="ivu-picker-panel-content"]//li[ contains(@class,"ivu-time-picker-cells-cell") and @type="hour" and text()="'+hour_str+'"]')
+					await hour_select[1].click()
+					await asyncio.sleep(0.5)
+					minute_str = ""
+					minute_value = 0
+					while True:
+						if minute_value < end_minute:
+							minute_value += 5
+						if minute_value > 55   :
+							minute_value = 55
+							break
+						if minute_value > end_minute:
+							break
+						if minute_value == end_minute:
+							break
+					if minute_value == 0:
+						minute_str = "00"
+					elif minute_value == 5:
+						minute_str = "05"
+					else:
+						minute_str = str(minute_value)
+
+			   
+					minute_select = await page.query_selector_all('//div[@class="ivu-picker-panel-content"]//li[ contains(@class,"ivu-time-picker-cells-cell") and @type="min" and text()="'+minute_str+'"]')
+					await minute_select[1].click()
+					await asyncio.sleep(0.5)
+					await select_hour_all[1].click()
+					await asyncio.sleep(0.5)
+					
+			
+			break
+
+		ok_button = await page.wait_for_selector('//div[@class="ivu-picker-confirm"]//a[text()="确定"]')
+		if ok_button:
+			await ok_button.click()
+		await asyncio.sleep(0.5)
+
+	
+		
+
+
+		msg = f'⏰  Input time value {start_time_value} and {end_time_value} into index {element_node.highlight_index}'
+		logger.info(msg)
+
 
 	@time_execution_async('--input_time_element_node')
 	async def _input_time_element_node(self, element_node: DOMElementNode, time_value: str, time_format: str | None = None):
@@ -2259,11 +2553,11 @@ class BrowserContext:
 		Waits for an element matching the given CSS selector to become visible.
 
 		Args:
-		    selector (str): The CSS selector of the element.
-		    timeout (float): The maximum time to wait for the element to be visible (in milliseconds).
+			selector (str): The CSS selector of the element.
+			timeout (float): The maximum time to wait for the element to be visible (in milliseconds).
 
 		Raises:
-		    TimeoutError: If the element does not become visible within the specified timeout.
+			TimeoutError: If the element does not become visible within the specified timeout.
 		"""
 		page = await self.get_agent_current_page()
 		await page.wait_for_selector(selector, state='visible', timeout=timeout)

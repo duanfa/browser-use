@@ -93,7 +93,9 @@ def get_default_config() -> dict[str, Any]:
 				'GROK_API_KEY': os.getenv('GROK_API_KEY', ''),
 			},
 		},
-		'agent': {},  # AgentSettings will use defaults
+		'agent': {
+			'extend_system_prompt': os.getenv('extend_system_prompt', '') ,
+		},  # AgentSettings will use defaults
 		'browser': {
 			'headless': True,
 		},

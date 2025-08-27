@@ -10,6 +10,7 @@ import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Generic, TypeVar
+import datetime
 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -120,7 +121,7 @@ class Agent(Generic[Context]):
 		use_vision_for_planner: bool = False,
 		save_conversation_path: str | None = None,
 		save_conversation_path_encoding: str | None = 'utf-8',
-		max_failures: int = 3,
+		max_failures: int = 5,
 		retry_delay: int = 10,
 		override_system_message: str | None = None,
 		extend_system_message: str | None = None,
@@ -697,7 +698,7 @@ class Agent(Generic[Context]):
 		input_messages = self._convert_input_messages(input_messages)
 		structured_llm = None
 		if self.tool_calling_method == 'raw':
-			logger.debug(f'Using {self.tool_calling_method} for {self.chat_model_library}')
+			logger.debug(f'$$$if Using {self.tool_calling_method} for {self.chat_model_library}')
 			try:
 				output = self.llm.invoke(input_messages)
 				response = {'raw': output, 'parsed': None}
@@ -715,6 +716,8 @@ class Agent(Generic[Context]):
 				raise ValueError('Could not parse response.')
 
 		elif self.tool_calling_method is None:
+			logger.debug(f'$$$ elif Using {self.tool_calling_method} for {self.chat_model_library}')
+
 			structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True)
 			try:
 				response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
@@ -725,9 +728,15 @@ class Agent(Generic[Context]):
 				raise LLMException(401, 'LLM API call failed') from e
 
 		else:
-			logger.debug(f'Using {self.tool_calling_method} for {self.chat_model_library}')
+			
+			logger.info(f"")
+			start_time = datetime.datetime.now()
+			logger.debug(f'$$$else Using {self.tool_calling_method} for {self.chat_model_library} structured_llm start: {start_time}')
 			structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True, method=self.tool_calling_method)
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
+			end_time = datetime.datetime.now()
+			time_diff = (end_time - start_time).total_seconds()
+			logger.debug(f'$$$else Using {self.tool_calling_method} for {self.chat_model_library} structured_llm use:{time_diff}s end: {datetime.datetime.now()}')
 
 		
 		input_messages_str = f'{input_messages}'
@@ -747,7 +756,7 @@ class Agent(Generic[Context]):
 		 # 打印输出格式
 		logger.info(f"\n输出格式: {self.AgentOutput}")
 		
-		logger.info(f'############################### action raw structured_llm:{structured_llm}\ninput_messages:{input_messages_str}\nresponse: {response}')
+		logger.info(f'############################### action raw structured_llm:{structured_llm}\n###input_messages:{input_messages_str}\n###response: {response}\n ###: {datetime.datetime.now()}')
 
        
 		# Handle tool call responses
