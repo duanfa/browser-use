@@ -1016,6 +1016,38 @@ class Controller(Generic[Context]):
 			""")
 
 			return ActionResult(extracted_content=f'Updated cell {range} with {new_contents_tsv}', include_in_memory=False)
+		
+		@self.registry.action(
+			'鼠标悬停并弹出下拉菜单',
+			domains=['*'],
+		)
+		async def hover_and_show_dropdown(browser: BrowserContext, index: int):
+			"""
+			鼠标悬停在指定元素（通常是菜单项）上，触发下拉菜单的弹出。
+
+			Args:
+				index (int): 需要悬停的元素索引
+			Returns:
+				ActionResult: 操作结果，包含是否弹出下拉菜单的信息
+			"""
+			page = await browser.get_current_page()
+			selector_map = await browser.get_selector_map()
+			if index not in selector_map:
+				raise Exception(f'元素索引 {index} 不存在，请检查页面元素或重试')
+			element_node = await browser.get_dom_element_by_index(index)
+			element_handle = await browser.get_locate_element(element_node)
+			if not element_handle:
+				raise Exception(f'无法定位到索引为 {index} 的元素')
+			try:
+				await element_handle.hover()
+				await asyncio.sleep(0.5)  # 等待下拉菜单弹出
+				msg = f'已悬停在索引为 {index} 的元素上，尝试弹出下拉菜单'
+				logger.info(msg)
+				return ActionResult(extracted_content=msg, include_in_memory=True, success=True)
+			except Exception as e:
+				msg = f'悬停并弹出下拉菜单失败: {str(e)}'
+				logger.error(msg)
+				return ActionResult(error=msg, include_in_memory=True, success=False)
 
 		# @self.registry.action(
 		# 	'申请会议室：在会议页面点击"申请会议室"按钮，在弹出的所有会议室窗口中选择会议室，拖拉选择会议时间，点击确定按钮',

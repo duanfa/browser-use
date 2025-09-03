@@ -645,7 +645,8 @@
    * 
    * One of the things we tried at the beginning was also to use event listeners, and other fancy class, style stuff -> what actually worked best was just combining most things with computed cursor style :)
    */
-  function isInteractiveElement(element) {
+  function isInteractiveElement(element,debugNode=false) {
+    
     if (!element || element.nodeType !== Node_ELEMENT_NODE) {
       return false;
     }
@@ -708,14 +709,12 @@
 
       return false;
     }
-
     let isInteractiveCursor = doesElementHaveInteractivePointer(element);
 
     // Genius fix for almost all interactive elements
     if (isInteractiveCursor) {
       return true;
     }
-
     const interactiveElements = new Set([
       "a",          // Links
       "button",     // Buttons
@@ -751,7 +750,6 @@
       if (nonInteractiveCursors.has(style.cursor)) {
         return false;
       }
-
       // Check for explicit disable attributes
       for (const disableTag of explicitDisableTags) {
         if (element.hasAttribute(disableTag) ||
@@ -760,22 +758,19 @@
           return false;
         }
       }
-
       // Check for disabled property on form elements
       if (element.disabled) {
         return false;
       }
-
       // Check for readonly property on form elements
       if (element.readOnly) {
         return false;
       }
-
       // Check for inert property
       if (element.inert) {
         return false;
       }
-
+      
       return true;
     }
 
@@ -786,7 +781,6 @@
     if (element.getAttribute("contenteditable") === "true" || element.isContentEditable) {
       return true;
     }
-    
     // Added enhancement to capture dropdown interactive elements
     if (element.classList && (
       element.classList.contains("button") ||
@@ -797,7 +791,6 @@
     )) {
       return true;
     }
-
     const interactiveRoles = new Set([
       'button',           // Directly clickable element
       // 'link',            // Clickable link
@@ -825,12 +818,76 @@
       interactiveRoles.has(ariaRole);
 
     if (hasInteractiveRole) return true;
-
     // check whether element has event listeners
     try {
+      // 怎么样把你列出的这些事件都获取到？
+      // 1. getEventListenersForNode 只能在DevTools环境下用，普通页面用不了。要兼容所有环境，需多种方式结合。
+      // 2. 通过 element 的属性（如 onclick/onmousedown...）可以获取到通过HTML属性或 element.onclick 方式绑定的事件。
+      // 3. 通过遍历常见事件名，检查 element.hasAttribute('onxxx') 也能发现部分事件。
+      // 4. 框架（如React/Vue）合成事件、事件代理、动态绑定等，无法100%在JS里静态获取。可以通过分析 element 的 class/id/属性特征、父节点递归、甚至注入脚本hook addEventListener，但都不完美。
+      // 5. 事件代理只能通过递归父节点，结合事件名和常见代理容器（如ul/table/div等）做启发式推断。
+      // 6. 还可以通过监听全局 addEventListener，记录所有绑定，但这需要在页面加载前注入脚本，实际场景很难做到。
+
+      const getEventListeners = window.getEventListenersForNode;
+        // 1. DevTools环境下尝试获取
+      if (typeof getEventListeners === 'function') {
+        try {
+          const listeners = getEventListeners(element);
+          if (listeners && Object.keys(listeners).length > 0) {
+            console.log("DevTools getEventListeners:", listeners);
+          } else {
+            console.log("DevTools getEventListeners 为空，尝试其他方式");
+          }
+        } catch (e) {
+          console.log("getEventListenersForNode 报错:", e);
+        }
+      } else {
+        console.log("getEventListenersForNode 不可用，尝试其他方式");
+      }
+
+      // 2. 检查 element 的原生事件属性
+      // const eventProps = [
+      //   'onclick','ondblclick','onmousedown','onmouseup','onmouseenter','onmouseleave','onmouseover','onmouseout',
+      //   'onkeydown','onkeyup','onkeypress','oninput','onchange','onfocus','onblur','onsubmit','oncontextmenu'
+      // ];
+      const eventProps = [
+        'onclick','ondblclick','onmousedown','onmouseup','onmouseenter','onmouseover',
+        'oninput','onchange','onfocus','oncontextmenu'
+      ];
+      eventProps.forEach(prop => {
+        if (typeof element[prop] === 'function') {
+          console.log(`通过属性发现事件: ${prop}`);
+        }
+      });
+
+      // 3. 检查HTML属性
+      eventProps.forEach(attr => {
+        if (element.hasAttribute(attr)) {
+          console.log(`通过HTML属性发现事件: ${attr}`);
+        }
+      });
+
+      // 4. 检查常见事件代理容器（启发式，无法100%准确）
+      let parent = element.parentElement;
+      let level = 0;
+      while (parent && level < 3) { // 只递归3层
+        for (const prop of eventProps) {
+          if (typeof parent[prop] === 'function') {
+            console.log(`父节点${level}层发现事件代理: ${prop} on`, parent);
+            return true; // 这样就能正确返回到 isInteractiveElement
+          }
+        }
+        parent = parent.parentElement;
+        level++;
+      }
+
+      // 5. 框架合成事件、动态绑定等，无法直接获取，只能通过class/id/属性等启发式推断
+      // 例如React会有data-reactroot、Vue有v-前缀属性等，可以结合业务场景自定义判断
+                        
+      
       if (typeof getEventListeners === 'function') {
         const listeners = getEventListeners(element);
-        const mouseEvents = ['click', 'mousedown', 'mouseup', 'dblclick'];
+        const mouseEvents = ['click', 'mousedown', 'mouseup', 'dblclick', 'hover'];
         for (const eventType of mouseEvents) {
           if (listeners[eventType] && listeners[eventType].length > 0) {
             return true; // Found a mouse interaction listener
@@ -838,7 +895,7 @@
         }
       } else {
         // Fallback: Check common event attributes if getEventListeners is not available
-        const commonMouseAttrs = ['onclick', 'onmousedown', 'onmouseup', 'ondblclick'];
+        const commonMouseAttrs = ['onclick', 'onmousedown', 'onmouseup', 'ondblclick', 'onhover'];
         if (commonMouseAttrs.some(attr => element.hasAttribute(attr))) {
           return true;
         }
@@ -847,7 +904,6 @@
       // console.warn(`Could not check event listeners for ${element.tagName}:`, e);
       // If checking listeners fails, rely on other checks
     }
-
     return false
   }
 
@@ -1105,7 +1161,10 @@
   /**
    * Handles the logic for deciding whether to highlight an element and performing the highlight.
    */
-  function handleHighlighting(nodeData, node, parentIframe, isParentHighlighted) {
+  function handleHighlighting(nodeData, node, parentIframe, isParentHighlighted,debugNode=false) {
+    if(debugNode){
+      console.log("nodeData.isInteractive:", nodeData.isInteractive);
+    }
     if (!nodeData.isInteractive) return false; // Not interactive, definitely don't highlight
 
     let shouldHighlight = false;
@@ -1154,6 +1213,13 @@
    */
   function buildDomTree(node, parentIframe = null, isParentHighlighted = false) {
     // Fast rejection checks first
+
+    var debugNode = false
+    if ((node.tagName == "div" || node.tagName == "DIV") && (node.textContent == "协同邮箱" || node.textContent == "写邮件")) {
+      console.log("buildDomTree debugNode node:", node.tagName, node.nodeType,node.textContent,node);
+      debugNode = true
+    }
+    
     if (!node || node.id === HIGHLIGHT_CONTAINER_ID || 
         (node.nodeType !== Node_ELEMENT_NODE && node.nodeType !== Node_TEXT_NODE)) {
       if (debugMode) PERF_METRICS.nodeMetrics.skippedNodes++;
@@ -1275,7 +1341,7 @@
         if (nodeData.isTopElement) {
           nodeData.isInteractive = isInteractiveElement(node);
           // Call the dedicated highlighting function
-          nodeWasHighlighted = handleHighlighting(nodeData, node, parentIframe, isParentHighlighted);
+          nodeWasHighlighted = handleHighlighting(nodeData, node, parentIframe, isParentHighlighted,debugNode);
         }
       }
     }
