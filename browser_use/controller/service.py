@@ -1049,6 +1049,66 @@ class Controller(Generic[Context]):
 				logger.error(msg)
 				return ActionResult(error=msg, include_in_memory=True, success=False)
 
+		@self.registry.action(
+			'填写邮件收件人：在收件人输入框输入收件人姓名或邮箱，自动选择下方级联出现的收件人卡片',
+			domains=['a8demo.seeyoncloud.com'],
+		)
+		async def input_email_recipient(browser: BrowserContext, index: int, recipient: str):
+			"""
+			在邮件收件人输入框输入收件人，并点击下方级联出现的收件人卡片。
+
+			Args:
+				browser (BrowserContext): 浏览器上下文
+				index (int): 收件人输入框的索引
+				recipient (str): 收件人姓名或邮箱
+			Returns:
+				ActionResult: 操作结果
+			"""
+			page = await browser.get_current_page()
+			selector_map = await browser.get_selector_map()
+			if index not in selector_map:
+				raise Exception(f'元素索引 {index} 不存在，请检查页面元素或重试')
+			element_node = await browser.get_dom_element_by_index(index)
+			element_handle = await browser.get_locate_element(element_node)
+			if not element_handle:
+				raise Exception(f'无法定位到索引为 {index} 的收件人输入框')
+			try:
+				# 点击输入框并输入收件人
+				await element_handle.click()
+				# await asyncio.sleep(0.2)
+				# await element_handle.fill("")  # 清空
+				await element_handle.type(recipient, delay=50)
+				await asyncio.sleep(1)  # 等待级联卡片出现
+
+				# 尝试查找下方级联出现的收件人卡片
+				# 常见的收件人卡片可能是ul/li结构，或div列表，通常有"收件人"、"邮箱"等关键词
+				# 这里采用常见的选择器尝试
+				candidate_selectors = [
+					'//div[contains(@class, "suggest-list") or contains(@class, "suggestion") or contains(@class, "dropdown") or contains(@class, "popup") or contains(@class, "list")]/descendant::*[contains(text(), "' + recipient + '") or contains(@title, "' + recipient + '")]',
+					'//li[contains(text(), "' + recipient + '")]',
+					'//div[contains(@class, "ant-select-item-option-content") and contains(text(), "' + recipient + '")]',
+					'//span[contains(text(), "' + recipient + '")]',
+				]
+				card_handle = None
+				for selector in candidate_selectors:
+					try:
+						card_handle = await page.wait_for_selector(selector, timeout=2000)
+						if card_handle:
+							break
+					except Exception:
+						continue
+				if not card_handle:
+					raise Exception(f'未能找到收件人卡片，输入内容为: {recipient}')
+				await card_handle.click()
+				# 使用 JavaScript 使输入框失去焦点
+				await page.evaluate('(element) => element.blur()', element_handle)
+				msg = f'已在收件人输入框输入"{recipient}"并选择了下方级联出现的收件人卡片'
+				logger.info(msg)
+				return ActionResult(extracted_content=msg, include_in_memory=True, success=True)
+			except Exception as e:
+				msg = f'填写收件人并选择卡片失败: {str(e)}'
+				logger.error(msg)
+				return ActionResult(error=msg, include_in_memory=True, success=False)
 		# @self.registry.action(
 		# 	'申请会议室：在会议页面点击"申请会议室"按钮，在弹出的所有会议室窗口中选择会议室，拖拉选择会议时间，点击确定按钮',
 		# 	param_model=ApplyMeetingRoomAction,
