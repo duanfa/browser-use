@@ -230,6 +230,19 @@ class Controller(Generic[Context]):
 			if params.index not in await browser.get_selector_map():
 				raise Exception(f'Element index {params.index} does not exist - retry or use alternative actions')
 			page = await browser.get_current_page()
+
+			try:
+				iframe = await page.query_selector("//div[@id='main']/iframe");
+				if iframe:
+					page = await iframe.content_frame()
+					logger.info("成功获取iframe内容")
+				else:
+					raise Exception("不存在iframe，请检查页面是否存在iframe")
+			except Exception as e:
+				logger.debug(f"无法获取iframe内容: {str(e)}")
+				page = page
+				if not page:
+					raise Exception("无法获取iframe内容")
 		
 			element_node = await browser.get_dom_element_by_index(params.index)
 			if not element_node:

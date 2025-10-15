@@ -99,6 +99,9 @@ class DomService:
 
 		try:
 			eval_page: dict = await self.page.evaluate(self.js_code, args)
+			for key, value in eval_page.get('map', {}).items():
+				if value.get('text') == "协同邮箱" or value.get('text') == "写邮件":
+					print(f'{key}: {value}')
 		except Exception as e:
 			logger.error('Error evaluating JavaScript: %s', e)
 			raise
